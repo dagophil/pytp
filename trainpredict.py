@@ -16,8 +16,12 @@ class TrainPredictData(object):
     # The paths that are used inside the .tpd file.
     _tpd_train_raw_path = "train_raw_path"
     _tpd_train_raw_key = "train_raw_key"
+    _tpd_train_gt_path = "train_gt_path"
+    _tpd_train_gt_key = "train_gt_key"
     _tpd_test_raw_path = "test_raw_path"
     _tpd_test_raw_key = "test_raw_key"
+    _tpd_test_gt_path = "test_gt_path"
+    _tpd_test_gt_key = "test_gt_key"
 
     def __init__(self, file_name, abs_paths=False):
         """
