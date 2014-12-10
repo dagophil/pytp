@@ -1,6 +1,7 @@
 import os
 import h5py
 import vigra
+import numpy
 
 
 class TPDError(RuntimeError):
@@ -18,10 +19,12 @@ class TrainPredictData(object):
     _tpd_train_raw_key = "train_raw_key"
     _tpd_train_gt_path = "train_gt_path"
     _tpd_train_gt_key = "train_gt_key"
+    _tpd_train_feat = "train_feat"
     _tpd_test_raw_path = "test_raw_path"
     _tpd_test_raw_key = "test_raw_key"
     _tpd_test_gt_path = "test_gt_path"
     _tpd_test_gt_key = "test_gt_key"
+    _tpd_test_feat = "test_feat"
 
     def __init__(self, file_name, use_abs_paths=False, check_file_exists=False):
         """
@@ -81,33 +84,52 @@ class TrainPredictData(object):
             if not os.path.isfile(file_name):
                 raise TPDError("_check_file_exists(): The given file does not exist.")
 
+    def _set_data(self, file_name, h5_key, tpd_path, tpd_key):
+        """Set file name and h5 key of the data.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        :param tpd_path: tpd key of the file
+        :param tpd_key: tpd key of the h5 key
+        """
+        self._check_file_exists(file_name)
+        with h5py.File(self.file_name, "a") as f:
+            if tpd_path in f.keys():
+                del f[tpd_path]
+            if tpd_key in f.keys():
+                del f[tpd_key]
+            f[tpd_path] = self._to_tpd_path(file_name)
+            f[tpd_key] = h5_key
+
+    def _get_data(self, tpd_path, tpd_key):
+        """Return file name and h5 key of the data.
+
+        :param tpd_path: tpd key of the file
+        :param tpd_key: tpd key of the h5 key
+        :return: file name, h5 key
+        """
+        with h5py.File(self.file_name, "r") as f:
+            if tpd_path not in f.keys() or tpd_key not in f.keys():
+                raise TPDError("_get_data(): The .tpd file does not contain the desired data.")
+            file_name = f[tpd_path].value
+            h5_key = f[tpd_key].value
+        file_name = self._to_rel_path(file_name)
+        return file_name, h5_key
+
     def set_train_raw(self, file_name, h5_key):
         """Set file name and h5 key of the training raw data.
 
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._check_file_exists(file_name)
-        with h5py.File(self.file_name, "a") as f:
-            if self._tpd_train_raw_path in f.keys():
-                del f[self._tpd_train_raw_path]
-            if self._tpd_train_raw_key in f.keys():
-                del f[self._tpd_train_raw_key]
-            f[self._tpd_train_raw_path] = self._to_tpd_path(file_name)
-            f[self._tpd_train_raw_key] = h5_key
+        self._set_data(file_name, h5_key, self._tpd_train_raw_path, self._tpd_train_raw_key)
 
     def get_train_raw(self):
         """Return file name and h5 key of the training raw data.
 
         :return: file name, h5 key
         """
-        with h5py.File(self.file_name, "r") as f:
-            if self._tpd_train_raw_path not in f.keys() or self._tpd_train_raw_key not in f.keys():
-                raise TPDError("get_train_raw(): The .tpd file does not contain raw training data.")
-            file_name = f[self._tpd_train_raw_path].value
-            h5_key = f[self._tpd_train_raw_key].value
-        file_name = self._to_rel_path(file_name)
-        return file_name, h5_key
+        return self._get_data(self._tpd_train_raw_path, self._tpd_train_raw_key)
 
     def get_train_raw_data(self):
         """Return the training raw data.
@@ -123,27 +145,14 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._check_file_exists(file_name)
-        with h5py.File(self.file_name, "a") as f:
-            if self._tpd_train_gt_path in f.keys():
-                del f[self._tpd_train_gt_path]
-            if self._tpd_train_gt_key in f.keys():
-                del f[self._tpd_train_gt_key]
-            f[self._tpd_train_gt_path] = self._to_tpd_path(file_name)
-            f[self._tpd_train_gt_key] = h5_key
+        self._set_data(file_name, h5_key, self._tpd_train_gt_path, self._tpd_train_gt_key)
 
     def get_train_gt(self):
         """Return file name and h5 key of the training raw data.
 
         :return: file name, h5 key
         """
-        with h5py.File(self.file_name, "r") as f:
-            if self._tpd_train_gt_path not in f.keys() or self._tpd_train_gt_key not in f.keys():
-                raise TPDError("get_train_gt(): The .tpd file does not contain gt training data.")
-            file_name = f[self._tpd_train_gt_path].value
-            h5_key = f[self._tpd_train_gt_key].value
-        file_name = self._to_rel_path(file_name)
-        return file_name, h5_key
+        return self._get_data(self._tpd_train_gt_path, self._tpd_train_gt_key)
 
     def get_train_gt_data(self):
         """Return the training gt data.
@@ -159,27 +168,14 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._check_file_exists(file_name)
-        with h5py.File(self.file_name, "a") as f:
-            if self._tpd_test_raw_path in f.keys():
-                del f[self._tpd_test_raw_path]
-            if self._tpd_test_raw_key in f.keys():
-                del f[self._tpd_test_raw_key]
-            f[self._tpd_test_raw_path] = self._to_tpd_path(file_name)
-            f[self._tpd_test_raw_key] = h5_key
+        self._set_data(file_name, h5_key, self._tpd_test_raw_path, self._tpd_test_raw_key)
 
     def get_test_raw(self):
         """Return file name and h5 key of the test raw data.
 
         :return: file name, h5 key
         """
-        with h5py.File(self.file_name, "r") as f:
-            if self._tpd_test_raw_path not in f.keys() or self._tpd_test_raw_key not in f.keys():
-                raise TPDError("get_test_raw(): The .tpd file does not contain raw test data.")
-            file_name = f[self._tpd_test_raw_path].value
-            h5_key = f[self._tpd_test_raw_key].value
-        file_name = self._to_rel_path(file_name)
-        return file_name, h5_key
+        return self._get_data(self._tpd_test_raw_path, self._tpd_test_raw_key)
 
     def get_test_raw_data(self):
         """Return the test raw data.
@@ -195,27 +191,14 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._check_file_exists(file_name)
-        with h5py.File(self.file_name, "a") as f:
-            if self._tpd_test_gt_path in f.keys():
-                del f[self._tpd_test_gt_path]
-            if self._tpd_test_gt_key in f.keys():
-                del f[self._tpd_test_gt_key]
-            f[self._tpd_test_gt_path] = self._to_tpd_path(file_name)
-            f[self._tpd_test_gt_key] = h5_key
+        self._set_data(file_name, h5_key, self._tpd_test_gt_path, self._tpd_test_gt_key)
 
     def get_test_gt(self):
         """Return file name and h5 key of the test gt data.
 
         :return: file name, h5 key
         """
-        with h5py.File(self.file_name, "r") as f:
-            if self._tpd_test_gt_path not in f.keys() or self._tpd_test_gt_key not in f.keys():
-                raise TPDError("get_test_gt(): The .tpd file does not contain raw test data.")
-            file_name = f[self._tpd_test_gt_path].value
-            h5_key = f[self._tpd_test_gt_key].value
-        file_name = self._to_rel_path(file_name)
-        return file_name, h5_key
+        return self._get_data(self._tpd_test_gt_path, self._tpd_test_gt_key)
 
     def get_test_gt_data(self):
         """Return the test gt data.
@@ -224,3 +207,40 @@ class TrainPredictData(object):
         """
         file_name, h5_key = self.get_test_gt()
         return vigra.readHDF5(file_name, h5_key)
+
+    def _add_feature(self, file_name, h5_key, tpd_key):
+        """
+        Add the given feature to the training or test data, depending on the tpd key.
+        The feature will only be added, if it is not already in the feature list.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        :param tpd_key: key in the .tpd file
+        """
+        self._check_file_exists(file_name)
+        to_add = [self._to_tpd_path(file_name), h5_key]
+        with h5py.File(self.file_name, "a") as f:
+            if tpd_key in f.keys():
+                feature_list = f[tpd_key].value.tolist()
+                del f[tpd_key]
+            else:
+                feature_list = []
+            if to_add not in feature_list:
+                feature_list.append(to_add)
+            f[tpd_key] = numpy.array(feature_list)
+
+    def add_train_feature(self, file_name, h5_key):
+        """Add the given training feature, but only if it is not already in the feature list.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        """
+        self._add_feature(file_name, h5_key, self._tpd_train_feat)
+
+    def add_test_feature(self, file_name, h5_key):
+        """Add the given test feature, but only if it is not already in the feature list.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        """
+        self._add_feature(file_name, h5_key, self._tpd_test_feat)
