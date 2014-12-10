@@ -48,9 +48,10 @@ class TrainPredictData(object):
         :param file_name: file name relative to working directory
         :return: file name relative to .tpd file considering abs path setting
         """
-        path = os.path.relpath(file_name, start=self.base_path)
         if self.use_abs_paths:
-            path = os.path.abspath(path)
+            path = os.path.abspath(file_name)
+        else:
+            path = os.path.relpath(file_name, start=self.base_path)
         return path
 
     def _to_rel_path(self, file_name):
