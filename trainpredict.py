@@ -26,7 +26,7 @@ class TrainPredictData(object):
     _tpd_test_gt_key = "test_gt_key"
     _tpd_test_feat = "test_feat"
 
-    def __init__(self, file_name, use_abs_paths=False, check_file_exists=False):
+    def __init__(self, file_name, use_abs_paths=False, check_file_exists=False, check_feat_dims=False):
         """
         Create a TrainPredictData instance by loading the given file.
         If the given file does not exist, it will be created.
@@ -34,6 +34,7 @@ class TrainPredictData(object):
         :param file_name: file name
         :param use_abs_paths: when adding new data sets, the absolute path will be used instead of the relative path
         :param check_file_exists: when adding new data sets, check if the added file exists
+        :param check_feat_dims: when adding new features, check if the feature dimension matches the previous ones
         """
         # Check if the file can be opened with h5py.
         # If it does not exist, it will be created by h5py.
@@ -43,6 +44,7 @@ class TrainPredictData(object):
         self.file_name = file_name
         self.use_abs_paths = use_abs_paths
         self.check_file_exists = check_file_exists
+        self.check_feat_dims = check_feat_dims
         self.base_path = os.path.relpath(os.path.dirname(self.file_name))
 
     def _to_tpd_path(self, file_name):
@@ -217,6 +219,7 @@ class TrainPredictData(object):
         :param h5_key: h5 key
         :param tpd_key: key in the .tpd file
         """
+        # TODO: Check feature dimension.
         self._check_file_exists(file_name)
         to_add = [self._to_tpd_path(file_name), h5_key]
         with h5py.File(self.file_name, "a") as f:
@@ -244,3 +247,11 @@ class TrainPredictData(object):
         :param h5_key: h5 key
         """
         self._add_feature(file_name, h5_key, self._tpd_test_feat)
+
+    def get_feature_data(self, tpd_key):
+        """Get the features of the desired data set.
+
+        :param tpd_key: tpd key of the data
+        :return:
+        """
+        # TODO: Implement.
