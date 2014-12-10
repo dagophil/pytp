@@ -23,13 +23,14 @@ class TrainPredictData(object):
     _tpd_test_gt_path = "test_gt_path"
     _tpd_test_gt_key = "test_gt_key"
 
-    def __init__(self, file_name, use_abs_paths=False):
+    def __init__(self, file_name, use_abs_paths=False, check_file_exists=False):
         """
         Create a TrainPredictData instance by loading the given file.
         If the given file does not exist, it will be created.
 
         :param file_name: file name
         :param use_abs_paths: when adding new data sets, the absolute path will be used instead of the relative path
+        :param check_file_exists: when adding new data sets, check if the added file exists
         """
         # Check if the file can be opened with h5py.
         # If it does not exist, it will be created by h5py.
@@ -38,6 +39,7 @@ class TrainPredictData(object):
 
         self.file_name = file_name
         self.use_abs_paths = use_abs_paths
+        self.check_file_exists = check_file_exists
         self.base_path = os.path.relpath(os.path.dirname(self.file_name))
 
     def _to_tpd_path(self, file_name):
@@ -68,13 +70,29 @@ class TrainPredictData(object):
             path = os.path.join(self.base_path, file_name)
         return path
 
+    def _check_file_exists(self, file_name):
+        """
+        If self.check_file_exists is False, this method does nothing.
+        Otherwise, an exception will be raised if the given file does not exist.
+
+        :param file_name: file name relative to the working directory
+        """
+        if self.check_file_exists:
+            if not os.path.isfile(file_name):
+                raise TPDError("_check_file_exists(): The given file does not exist.")
+
     def set_train_raw(self, file_name, h5_key):
         """Set file name and h5 key of the training raw data.
 
         :param file_name: file name
         :param h5_key: h5 key
         """
+        self._check_file_exists(file_name)
         with h5py.File(self.file_name, "a") as f:
+            if self._tpd_train_raw_path in f.keys():
+                del f[self._tpd_train_raw_path]
+            if self._tpd_train_raw_key in f.keys():
+                del f[self._tpd_train_raw_key]
             f[self._tpd_train_raw_path] = self._to_tpd_path(file_name)
             f[self._tpd_train_raw_key] = h5_key
 
@@ -105,7 +123,12 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
+        self._check_file_exists(file_name)
         with h5py.File(self.file_name, "a") as f:
+            if self._tpd_train_gt_path in f.keys():
+                del f[self._tpd_train_gt_path]
+            if self._tpd_train_gt_key in f.keys():
+                del f[self._tpd_train_gt_key]
             f[self._tpd_train_gt_path] = self._to_tpd_path(file_name)
             f[self._tpd_train_gt_key] = h5_key
 
@@ -136,7 +159,12 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
+        self._check_file_exists(file_name)
         with h5py.File(self.file_name, "a") as f:
+            if self._tpd_test_raw_path in f.keys():
+                del f[self._tpd_test_raw_path]
+            if self._tpd_test_raw_key in f.keys():
+                del f[self._tpd_test_raw_key]
             f[self._tpd_test_raw_path] = self._to_tpd_path(file_name)
             f[self._tpd_test_raw_key] = h5_key
 
@@ -167,7 +195,12 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
+        self._check_file_exists(file_name)
         with h5py.File(self.file_name, "a") as f:
+            if self._tpd_test_gt_path in f.keys():
+                del f[self._tpd_test_gt_path]
+            if self._tpd_test_gt_key in f.keys():
+                del f[self._tpd_test_gt_key]
             f[self._tpd_test_gt_path] = self._to_tpd_path(file_name)
             f[self._tpd_test_gt_key] = h5_key
 
