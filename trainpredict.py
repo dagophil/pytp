@@ -20,21 +20,41 @@ class TrainPredictData(object):
     _tpd_train_gt_path = "train_gt_path"
     _tpd_train_gt_key = "train_gt_key"
     _tpd_train_feat = "train_feat"
+    _tpd_train_shape = "train_shape"
     _tpd_test_raw_path = "test_raw_path"
     _tpd_test_raw_key = "test_raw_key"
     _tpd_test_gt_path = "test_gt_path"
     _tpd_test_gt_key = "test_gt_key"
     _tpd_test_feat = "test_feat"
+    _tpd_test_shape = "test_shape"
 
-    def __init__(self, file_name, use_abs_paths=False, check_file_exists=False, check_feat_dims=False):
+    @staticmethod
+    def _check_file_exists(file_name):
+        """Raise an exception if the given file does not exist.
+
+        :param file_name: file name relative to the working directory
+        """
+        if not os.path.isfile(file_name):
+            raise TPDError("_check_file_exists(): The given file does not exist.")
+
+    @staticmethod
+    def _get_count(shape):
+        """Return the number of instances, given a shape.
+
+        :param shape: shape
+        :return: number of instances
+        """
+        from functools import reduce
+        from operator import mul
+        return reduce(mul, shape, 1)
+
+    def __init__(self, file_name, use_abs_paths=False):
         """
         Create a TrainPredictData instance by loading the given file.
         If the given file does not exist, it will be created.
 
         :param file_name: file name
         :param use_abs_paths: when adding new data sets, the absolute path will be used instead of the relative path
-        :param check_file_exists: when adding new data sets, check if the added file exists
-        :param check_feat_dims: when adding new features, check if the feature dimension matches the previous ones
         """
         # Check if the file can be opened with h5py.
         # If it does not exist, it will be created by h5py.
@@ -43,8 +63,6 @@ class TrainPredictData(object):
 
         self.file_name = file_name
         self.use_abs_paths = use_abs_paths
-        self.check_file_exists = check_file_exists
-        self.check_feat_dims = check_feat_dims
         self.base_path = os.path.relpath(os.path.dirname(self.file_name))
 
     def _to_tpd_path(self, file_name):
@@ -75,32 +93,39 @@ class TrainPredictData(object):
             path = os.path.join(self.base_path, file_name)
         return path
 
-    def _check_file_exists(self, file_name):
-        """
-        If self.check_file_exists is False, this method does nothing.
-        Otherwise, an exception will be raised if the given file does not exist.
-
-        :param file_name: file name relative to the working directory
-        """
-        if self.check_file_exists:
-            if not os.path.isfile(file_name):
-                raise TPDError("_check_file_exists(): The given file does not exist.")
-
-    def _set_data(self, file_name, h5_key, tpd_path, tpd_key):
+    def _set_data(self, file_name, h5_key, tpd_path, tpd_key, tpd_shape):
         """Set file name and h5 key of the data.
 
         :param file_name: file name
         :param h5_key: h5 key
         :param tpd_path: tpd key of the file
         :param tpd_key: tpd key of the h5 key
+        :param tpd_shape: tpd key with the shape of the data
         """
         self._check_file_exists(file_name)
+
+        # Read the shape of the new data set.
+        with h5py.File(file_name, "r") as f:
+            if h5_key not in f.keys():
+                raise TPDError("_set_data(): The given h5 key does not exist in the given file.")
+            new_shape = f[h5_key].shape
+        new_count = self._get_count(new_shape)
+
         with h5py.File(self.file_name, "a") as f:
+            # Check if the data shapes match.
+            if tpd_shape in f.keys():
+                shape = f[tpd_shape]
+                count = self._get_count(shape)
+                if new_count != count:
+                    raise TPDError("_set_data(): The numbers of instances do not match.")
+            else:
+                f[tpd_shape] = new_shape
+
             if tpd_path in f.keys():
                 del f[tpd_path]
+            f[tpd_path] = self._to_tpd_path(file_name)
             if tpd_key in f.keys():
                 del f[tpd_key]
-            f[tpd_path] = self._to_tpd_path(file_name)
             f[tpd_key] = h5_key
 
     def _get_data(self, tpd_path, tpd_key):
@@ -124,7 +149,9 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._set_data(file_name, h5_key, self._tpd_train_raw_path, self._tpd_train_raw_key)
+        self._set_data(file_name, h5_key,
+                       self._tpd_train_raw_path, self._tpd_train_raw_key,
+                       self._tpd_train_shape)
 
     def get_train_raw(self):
         """Return file name and h5 key of the training raw data.
@@ -147,7 +174,9 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._set_data(file_name, h5_key, self._tpd_train_gt_path, self._tpd_train_gt_key)
+        self._set_data(file_name, h5_key,
+                       self._tpd_train_gt_path, self._tpd_train_gt_key,
+                       self._tpd_train_shape)
 
     def get_train_gt(self):
         """Return file name and h5 key of the training raw data.
@@ -170,7 +199,9 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._set_data(file_name, h5_key, self._tpd_test_raw_path, self._tpd_test_raw_key)
+        self._set_data(file_name, h5_key,
+                       self._tpd_test_raw_path, self._tpd_test_raw_key,
+                       self._tpd_test_shape)
 
     def get_test_raw(self):
         """Return file name and h5 key of the test raw data.
@@ -193,7 +224,9 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._set_data(file_name, h5_key, self._tpd_test_gt_path, self._tpd_test_gt_key)
+        self._set_data(file_name, h5_key,
+                       self._tpd_test_gt_path, self._tpd_test_gt_key,
+                       self._tpd_test_shape)
 
     def get_test_gt(self):
         """Return file name and h5 key of the test gt data.
@@ -210,7 +243,7 @@ class TrainPredictData(object):
         file_name, h5_key = self.get_test_gt()
         return vigra.readHDF5(file_name, h5_key)
 
-    def _add_feature(self, file_name, h5_key, tpd_key):
+    def _add_feature(self, file_name, h5_key, tpd_key, tpd_shape):
         """
         Add the given feature to the training or test data, depending on the tpd key.
         The feature will only be added, if it is not already in the feature list.
@@ -218,18 +251,41 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         :param tpd_key: key in the .tpd file
+        :param tpd_shape: key in the .tpd file with the shape of the data
         """
-        # TODO: Check feature dimension.
         self._check_file_exists(file_name)
         to_add = [self._to_tpd_path(file_name), h5_key]
+
+        # Read the data shape from the given file.
+        with h5py.File(file_name, "r") as f:
+            if h5_key not in f.keys():
+                raise TPDError("_add_feature(): The given h5 key does not exist in the given file.")
+            new_shape = f[h5_key].shape
+        new_count = self._get_count(new_shape)
+
+        # Append the new feature to the feature list.
         with h5py.File(self.file_name, "a") as f:
+            # Get the current feature list.
             if tpd_key in f.keys():
                 feature_list = f[tpd_key].value.tolist()
-                del f[tpd_key]
             else:
                 feature_list = []
+
+            # Get the shape of the old data.
+            if tpd_shape in f.keys():
+                shape = f[tpd_shape]
+                count = self._get_count(shape)
+                if new_count != count:
+                    raise TPDError("_add_feature(): The numbers of instances do not match.")
+            else:
+                f[tpd_shape] = new_shape
+
+            # Append the feature to the list.
             if to_add not in feature_list:
                 feature_list.append(to_add)
+
+            if tpd_key in f.keys():
+                del f[tpd_key]
             f[tpd_key] = numpy.array(feature_list)
 
     def add_train_feature(self, file_name, h5_key):
@@ -238,7 +294,7 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._add_feature(file_name, h5_key, self._tpd_train_feat)
+        self._add_feature(file_name, h5_key, self._tpd_train_feat, self._tpd_train_shape)
 
     def add_test_feature(self, file_name, h5_key):
         """Add the given test feature, but only if it is not already in the feature list.
@@ -246,7 +302,7 @@ class TrainPredictData(object):
         :param file_name: file name
         :param h5_key: h5 key
         """
-        self._add_feature(file_name, h5_key, self._tpd_test_feat)
+        self._add_feature(file_name, h5_key, self._tpd_test_feat, self._tpd_test_shape)
 
     def get_feature_data(self, tpd_key):
         """Get the features of the desired data set.
@@ -255,3 +311,4 @@ class TrainPredictData(object):
         :return:
         """
         # TODO: Implement.
+        raise NotImplementedError
