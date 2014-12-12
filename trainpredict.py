@@ -114,7 +114,7 @@ class TrainPredictData(object):
         with h5py.File(self.file_name, "a") as f:
             # Check if the data shapes match.
             if tpd_shape in f.keys():
-                shape = f[tpd_shape]
+                shape = tuple(f[tpd_shape].value)
                 count = self._get_count(shape)
                 if new_count != count:
                     raise TPDError("_set_data(): The numbers of instances do not match.")
@@ -256,12 +256,13 @@ class TrainPredictData(object):
         self._check_file_exists(file_name)
         to_add = [self._to_tpd_path(file_name), h5_key]
 
-        # Read the data shape from the given file.
+        # Read the instance count from the given file.
         with h5py.File(file_name, "r") as f:
             if h5_key not in f.keys():
                 raise TPDError("_add_feature(): The given h5 key does not exist in the given file.")
             new_shape = f[h5_key].shape
-        new_count = self._get_count(new_shape)
+        new_shape_count = self._get_count(new_shape)
+        new_count = new_shape[0]
 
         # Append the new feature to the feature list.
         with h5py.File(self.file_name, "a") as f:
@@ -273,12 +274,10 @@ class TrainPredictData(object):
 
             # Get the shape of the old data.
             if tpd_shape in f.keys():
-                shape = f[tpd_shape]
+                shape = tuple(f[tpd_shape].value)
                 count = self._get_count(shape)
-                if new_count != count:
+                if new_count != count and new_shape_count != count:
                     raise TPDError("_add_feature(): The numbers of instances do not match.")
-            else:
-                f[tpd_shape] = new_shape
 
             # Append the feature to the list.
             if to_add not in feature_list:
@@ -304,11 +303,75 @@ class TrainPredictData(object):
         """
         self._add_feature(file_name, h5_key, self._tpd_test_feat, self._tpd_test_shape)
 
-    def get_feature_data(self, tpd_key):
+    def _get_feature_data(self, tpd_key, tpd_shape):
         """Get the features of the desired data set.
 
         :param tpd_key: tpd key of the data
-        :return:
+        :param tpd_shape: tpd key of the shape of the raw data
+        :return: features of the desired data set
         """
-        # TODO: Implement.
-        raise NotImplementedError
+        with h5py.File(self.file_name, "r") as f:
+            if tpd_key not in f.keys():
+                raise TPDError("_get_feature_data(): There are no features in the .tpd file.")
+            feature_list = f[tpd_key].value.tolist()
+            if tpd_shape in f.keys():
+                shape = tuple(f[tpd_shape].value)
+                count = self._get_count(shape)
+            else:
+                shape = None
+
+        # Check that the number of instances in all feature files is correct and get the number of features.
+        num_all_feats = []
+        for file_path, h5_key in feature_list:
+            # Read the shape of the feature data.
+            file_path = self._to_rel_path(file_path)
+            with h5py.File(file_path, "r") as f:
+                if h5_key not in f.keys():
+                    raise TPDError("_get_feature_data(): The h5 key does not exist in the given file.")
+                new_shape = f[h5_key].shape
+            new_count = self._get_count(new_shape)
+            if shape is None:
+                shape = new_shape
+                count = self._get_count(shape)
+
+            # Get the number of features that are inside the current data set.
+            if new_count == count:
+                num_all_feats.append(1)
+            elif new_shape[0] == count:
+                num_all_feats.append(self._get_count(new_shape[1:]))
+            else:
+                raise TPDError("_get_feature_data(): The numbers of instances do not match.")
+
+        # Write all features into a single numpy array.
+        feats = numpy.zeros((count, sum(num_all_feats)))
+        current_feat = 0
+        for i in xrange(len(num_all_feats)):
+            file_path, h5_key = feature_list[i]
+            file_path = self._to_rel_path(file_path)
+            num_feats = num_all_feats[i]
+
+            # Read the feature data.
+            with h5py.File(file_path, "r") as f:
+                feat = f[h5_key].value
+            feat = feat.reshape((count, num_feats))
+
+            # Write all features into the feature array.
+            for k in xrange(num_feats):
+                feats[:, current_feat] = feat[:, k]
+                current_feat += 1
+
+        return feats
+
+    def get_train_features(self):
+        """Return a (n, d) numpy array with the training features (n instances, d features).
+
+        :return: training features
+        """
+        return self._get_feature_data(self._tpd_train_feat, self._tpd_train_shape)
+
+    def get_test_features(self):
+        """Return a (n, d) numpy array with the test features (n instances, d features).
+
+        :return: test features
+        """
+        return self._get_feature_data(self._tpd_test_feat, self._tpd_test_shape)
