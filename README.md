@@ -51,6 +51,6 @@ create_tpd_file.py. You are then asked for the paths of the input files.
 If those files only contain a single h5 key, this key is used. Else you have to
 enter the correct key manually.
 
-To skip a data set, just enter nothing.
-
     python create_tpd_file.py
+
+To skip a data set, just enter nothing.
