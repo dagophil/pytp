@@ -60,14 +60,19 @@ class TrainPredictData(object):
         :param file_name: file name
         :param use_abs_paths: when adding new data sets, the absolute path will be used instead of the relative path
         """
+        self.file_name = file_name
+        self.use_abs_paths = use_abs_paths
+        dirname = os.path.dirname(self.file_name)
+        if len(dirname) == 0:
+            dirname = "."
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        self.base_path = os.path.relpath(dirname)
+
         # Check if the file can be opened with h5py.
         # If it does not exist, it will be created by h5py.
         f = h5py.File(file_name, "a")
         f.close()
-
-        self.file_name = file_name
-        self.use_abs_paths = use_abs_paths
-        self.base_path = os.path.relpath(os.path.dirname(self.file_name))
 
     def _to_tpd_path(self, file_name):
         """
