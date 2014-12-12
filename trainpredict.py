@@ -21,12 +21,16 @@ class TrainPredictData(object):
     _tpd_train_gt_key = "train_gt_key"
     _tpd_train_feat = "train_feat"
     _tpd_train_shape = "train_shape"
+    _tpd_train_pred_path = "train_pred_path"
+    _tpd_train_pred_key = "train_pred_key"
     _tpd_test_raw_path = "test_raw_path"
     _tpd_test_raw_key = "test_raw_key"
     _tpd_test_gt_path = "test_gt_path"
     _tpd_test_gt_key = "test_gt_key"
     _tpd_test_feat = "test_feat"
     _tpd_test_shape = "test_shape"
+    _tpd_test_pred_path = "test_pred_path"
+    _tpd_test_pred_key = "test_pred_key"
 
     @staticmethod
     def _check_file_exists(file_name):
@@ -375,3 +379,53 @@ class TrainPredictData(object):
         :return: test features
         """
         return self._get_feature_data(self._tpd_test_feat, self._tpd_test_shape)
+
+    def set_train_pred(self, file_name, h5_key):
+        """Set file name and h5 key of the training prediction data.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        """
+        self._set_data(file_name, h5_key,
+                       self._tpd_train_pred_path, self._tpd_train_pred_key,
+                       self._tpd_train_shape)
+
+    def get_train_pred(self):
+        """Return file name and h5 key of the training prediction data.
+
+        :return: file name, h5 key
+        """
+        return self._get_data(self._tpd_train_pred_path, self._tpd_train_pred_key)
+
+    def get_train_pred_data(self):
+        """Return the training prediction data.
+
+        :return: training prediction data
+        """
+        file_name, h5_key = self.get_train_pred()
+        return vigra.readHDF5(file_name, h5_key)
+
+    def set_test_pred(self, file_name, h5_key):
+        """Set file name and h5 key of the test prediction data.
+
+        :param file_name: file name
+        :param h5_key: h5 key
+        """
+        self._set_data(file_name, h5_key,
+                       self._tpd_test_pred_path, self._tpd_test_pred_key,
+                       self._tpd_test_shape)
+
+    def get_test_pred(self):
+        """Return file name and h5 key of the test prediction data.
+
+        :return: file name, h5 key
+        """
+        return self._get_data(self._tpd_test_pred_path, self._tpd_test_pred_key)
+
+    def get_test_pred_data(self):
+        """Return the test prediction data.
+
+        :return: test prediction data
+        """
+        file_name, h5_key = self.get_test_pred()
+        return vigra.readHDF5(file_name, h5_key)
