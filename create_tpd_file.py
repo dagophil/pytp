@@ -67,6 +67,9 @@ def main():
     tpd_file_name = get_nonexisting_file("Enter name of new tpd file: ")
     tpd = TrainPredictData(tpd_file_name)
 
+    print "You can now enter the file paths of the the newly created tpd file."
+    print "If you want to skip a data set, just press enter without typing anything."
+
     train_raw_path = get_existing_file("Enter training raw path: ", skip=True)
     if train_raw_path is not None:
         train_raw_key = extract_h5_key(train_raw_path, "Enter training raw h5 key: ")
