@@ -385,6 +385,23 @@ class TrainPredictData(object):
         """
         return self._get_feature_data(self._tpd_test_feat, self._tpd_test_shape)
 
+    def _clear_features(self, tpd_key):
+        """Clear the list with features.
+        """
+        with h5py.File(self.file_name) as f:
+            if tpd_key in f.keys():
+                del f[tpd_key]
+
+    def clear_train_features(self):
+        """Clear the list with training features.
+        """
+        self._clear_features(self._tpd_train_feat)
+
+    def clear_test_features(self):
+        """Clear the list with test features.
+        """
+        self._clear_features(self._tpd_test_feat)
+
     def set_train_pred(self, file_name, h5_key):
         """Set file name and h5 key of the training prediction data.
 
