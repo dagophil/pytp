@@ -451,3 +451,38 @@ class TrainPredictData(object):
         """
         file_name, h5_key = self.get_test_pred()
         return vigra.readHDF5(file_name, h5_key)
+
+    def show(self):
+        """Show raw and ground truth data of training and test set.
+        """
+        from PyQt4.QtGui import QApplication
+        from segmentation.labeling.faceLabeling import FaceLabeler
+        app = QApplication([])
+        v = FaceLabeler(numpy.array([0]), [0, 0, 0, 0])
+
+        try:
+            raw_train = self.get_train_raw_data()
+            v.addGrayscaleLayer(raw_train, "raw train")
+        except TPDError:
+            pass
+
+        try:
+            gt_train = self.get_train_gt_data()
+            v.addRandomColorsLayer(gt_train, "gt train")
+        except TPDError:
+            pass
+
+        try:
+            raw_test = self.get_test_raw_data()
+            v.addGrayscaleLayer(raw_test, "raw test")
+        except TPDError:
+            pass
+
+        try:
+            gt_test = self.get_test_gt_data()
+            v.addRandomColorsLayer(gt_test, "gt test")
+        except TPDError:
+            pass
+
+        v.show()
+        app.exec_()
