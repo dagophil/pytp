@@ -312,6 +312,38 @@ class TrainPredictData(object):
         """
         self._add_feature(file_name, h5_key, self._tpd_test_feat, self._tpd_test_shape)
 
+    def _get_feature_file(self, tpd_key, i):
+        """Get file name and h5 key of the feature with index i.
+
+        :param tpd_key: tpd key of the data
+        :param i: feature index
+        :return: file name, h5 key
+        """
+        with h5py.File(self.file_name, "r") as f:
+            if tpd_key not in f.keys():
+                raise TPDError("_get_feature_file(): There are no features in the .tpd file.")
+            feature_list = f[tpd_key].value.tolist()
+
+        if i < 0 or i >= len(feature_list):
+            raise TPDError("_get_feature_file(): Index out of range.")
+        return self._to_rel_path(feature_list[i][0]), feature_list[i][1]
+
+    def get_train_feature_file(self, i):
+        """Get file name and h5 key of the training feature with index i.
+
+        :param i: feature index
+        :return: file name, h5 key
+        """
+        return self._get_feature_file(self._tpd_train_feat, i)
+
+    def get_test_feature_file(self, i):
+        """Get file name and h5 key of the test feature with index i.
+
+        :param i: feature index
+        :return: file name, h5 key
+        """
+        return self._get_feature_file(self._tpd_test_feat, i)
+
     def _get_feature_data(self, tpd_key, tpd_shape):
         """Get the features of the desired data set.
 
